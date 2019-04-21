@@ -56,7 +56,7 @@ public class DynamoDAO {
 		System.out.println("Fetching last modified time for load_date : " + load_date);
 		AmazonDynamoDB client = initialize();
 		DynamoDB dynamoDB = new DynamoDB(client);
-		Table table = dynamoDB.getTable("EDR_SFTP_FILE_STATUS");
+		Table table = dynamoDB.getTable("file_status");
 		QuerySpec spec = new QuerySpec().withKeyConditionExpression("file_load_date = :load_date")
 				.withValueMap(new ValueMap().with(":load_date", load_date));
 		ItemCollection<QueryOutcome> items = table.query(spec);
