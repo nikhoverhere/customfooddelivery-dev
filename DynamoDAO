@@ -1,0 +1,69 @@
+package com.nikh.sftp.setup;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
+import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
+import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
+
+public class DynamoDAO {
+
+	public static void main(String[] args) {
+
+		getFetchTime(20170318);
+	}
+
+	public static AmazonDynamoDB initialize() {
+		
+		
+		//TDO Move to Config File, change URL to string buider, from config
+		String access_key = "";
+		String secret_key = "";
+		System.setProperty("aws.accessKeyId", access_key);
+		System.setProperty("aws.secretKey", secret_key);
+		AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard()
+				.withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
+						"https://dynamodb.ap-#############", "##-#####-#"))
+				.withCredentials(new DefaultAWSCredentialsProviderChain()).build();
+		return client;
+
+	}
+
+	public static Map<Integer, Integer> getFetchTime(int load_date) {
+
+		Map<Integer, Integer> dateFetchTimeMap = new HashMap<Integer, Integer>();
+		int fetchTime = getFileLastModifiedTime(load_date);
+		if (fetchTime == 0) {
+			fetchTime = getFileLastModifiedTime(load_date-1);// -1 should be configurable
+			dateFetchTimeMap.put(load_date-1, fetchTime);
+		} else {
+			dateFetchTimeMap.put(load_date, fetchTime);
+		}
+		System.out.println(dateFetchTimeMap);
+		return dateFetchTimeMap;
+	}
+
+	public static int getFileLastModifiedTime(int load_date) {
+
+		System.out.println("Fetching last modified time for load_date : " + load_date);
+		AmazonDynamoDB client = initialize();
+		DynamoDB dynamoDB = new DynamoDB(client);
+		Table table = dynamoDB.getTable("EDR_SFTP_FILE_STATUS");
+		QuerySpec spec = new QuerySpec().withKeyConditionExpression("file_load_date = :load_date")
+				.withValueMap(new ValueMap().with(":load_date", load_date));
+		ItemCollection<QueryOutcome> items = table.query(spec);
+		int fetch_time = 0;
+		if (items.iterator().hasNext()) {
+			fetch_time = Integer.parseInt(items.iterator().next().asMap().get("file_modified_datetime").toString());
+		}
+		return fetch_time;
+	}
+}
